@@ -21,13 +21,11 @@ function Router(props: {
     overridePath
   } = props;
 
-  const l = window.location;
-
   // Correct routes.
-  routes = routes.map(r => { r.priority = r.priority ?? 0; return r; }).sort((r, r2) => r2.priority - r.priority);
+  if (routes.length > 1) routes = routes.map(r => { r.priority = r.priority ?? 0; return r; }).sort((r, r2) => r2.priority - r.priority);
 
   // Parse routes
-  let path = overridePath ?? l.pathname;
+  let path = overridePath ?? window.location.pathname;
   let route = routes.find(r => {
     if (typeof r.name === "string") {
       return r.name === path;
@@ -41,13 +39,13 @@ function Router(props: {
   if (!route) {
     return props.NotFoundPage ?? (<div>
       <h1>404</h1>
-      <p>The page cound not be found.</p>
+      <p>The page could not be found.</p>
     </div>);
   }
 
   if (route.redirect) {
     window.location.href = route.redirect;
-    return (<div></div>);
+    return (<></>);
   }
 
   try {
