@@ -14,7 +14,7 @@ function Router(props: {
   /**
    * 404 page if no page is found.
    */
-  NotFoundPage?: JSX.Element
+  notFoundPage?: JSX.Element
 }) {
   let {
     routes,
@@ -22,7 +22,10 @@ function Router(props: {
   } = props;
 
   // Correct routes.
-  if (routes.length > 1) routes = routes.map(r => { r.priority = r.priority ?? 0; return r; }).sort((r, r2) => r2.priority - r.priority);
+  if (routes.length > 1) routes = routes.map(r => {
+    r.priority = r.priority ?? 0;
+    return r;
+  }).sort((r, r2) => (r2.priority ?? 0) - (r.priority ?? 0));
 
   // Parse routes
   let path = overridePath ?? window.location.pathname;
@@ -37,7 +40,7 @@ function Router(props: {
   });
 
   if (!route) {
-    return props.NotFoundPage ?? (<div>
+    return props.notFoundPage ?? (<div>
       <h1>404</h1>
       <p>The page could not be found.</p>
     </div>);
@@ -55,18 +58,30 @@ function Router(props: {
       }
       else if (route.name instanceof RegExp) {
         let matches = path.match(route.name);
-        let m = matches.shift();
+        if (!matches) throw "No matches found";
+        let m = matches.shift() ?? "";
         return ((route as PageRouteDynamic).page as ((match: string, ...rest: string[]) => JSX.Element))(m, ...matches);
       }
       else {
-        return (<div>Internal Error</div>);
+        return (
+          <div>
+            <p>Internal Error</p>
+            <p>Unknown Error</p>
+          </div>
+        );
       }
     }
     else {
+      if (!route.page) return (
+        <div>
+          <p>Internal Error</p>
+          <p>Missing page</p>
+        </div>
+      );
       return route.page;
     }
   } catch (error) {
-    return props.NotFoundPage ?? (<div>
+    return props.notFoundPage ?? (<div>
       <h1>404</h1>
       <p>The page cound not be found.</p>
     </div>)
