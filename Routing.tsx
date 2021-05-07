@@ -1,4 +1,5 @@
-import React from "react";
+import React, { useState } from "react";
+
 /**
  * Routing v4
  */
@@ -14,18 +15,20 @@ function Router(props: {
   /**
    * 404 page if no page is found.
    */
-  notFoundPage?: JSX.Element
+  NotFoundPage?: JSX.Element
 }) {
+  const [pageData, setPageData] = useState<JSX.Element>(undefined); // Imagine using undefined as a literal value smh
+  if (pageData !== undefined) {
+    return pageData;
+  }
+
   let {
     routes,
     overridePath
   } = props;
 
   // Correct routes.
-  if (routes.length > 1) routes = routes.map(r => {
-    r.priority = r.priority ?? 0;
-    return r;
-  }).sort((r, r2) => (r2.priority ?? 0) - (r.priority ?? 0));
+  if (routes.length > 1) routes = routes.map(r => { r.priority = r.priority ?? 0; return r; }).sort((r, r2) => r2.priority - r.priority);
 
   // Parse routes
   let path = overridePath ?? window.location.pathname;
@@ -40,7 +43,7 @@ function Router(props: {
   });
 
   if (!route) {
-    return props.notFoundPage ?? (<div>
+    return props.NotFoundPage ?? (<div>
       <h1>404</h1>
       <p>The page could not be found.</p>
     </div>);
@@ -54,13 +57,20 @@ function Router(props: {
   try {
     if (typeof route.page === "function") {
       if (typeof route.name === "string") {
-        return ((route as PageRouteStatic).page as (() => JSX.Element))();
+        let loadedPage = ((route as PageRouteStatic).page as (() => Promise<JSX.Element>))();
+        Promise.resolve().then(async () => {
+          setPageData(await loadedPage);
+        });
+        return (<>Please wait while the page loads...</>) // Should be user defined loading page?
       }
       else if (route.name instanceof RegExp) {
         let matches = path.match(route.name);
-        if (!matches) throw "No matches found";
-        let m = matches.shift() ?? "";
-        return ((route as PageRouteDynamic).page as ((match: string, ...rest: string[]) => JSX.Element))(m, ...matches);
+        let m = matches.shift();
+        let loadedPage = ((route as PageRouteDynamic).page as ((match: string, ...rest: string[]) => Promise<JSX.Element>))(m, ...matches);
+        Promise.resolve().then(async () => {
+          setPageData(await loadedPage);
+        });
+        return (<>Please wait while the page loads...</>) // Should be user defined loading page?
       }
       else {
         return (
@@ -69,6 +79,7 @@ function Router(props: {
             <p>Unknown Error</p>
           </div>
         );
+        return (<div>Internal Error</div>);
       }
     }
     else {
@@ -81,7 +92,7 @@ function Router(props: {
       return route.page;
     }
   } catch (error) {
-    return props.notFoundPage ?? (<div>
+    return props.NotFoundPage ?? (<div>
       <h1>404</h1>
       <p>The page cound not be found.</p>
     </div>)
@@ -90,14 +101,14 @@ function Router(props: {
 
 export interface PageRouteDynamic {
   name: RegExp;
-  page?: JSX.Element | ((match: string, ...rest: string[]) => JSX.Element);
+  page?: JSX.Element | ((match: string, ...rest: string[]) => Promise<JSX.Element> | JSX.Element);
   redirect?: string;
   priority?: number;
 }
 
 export interface PageRouteStatic {
   name: string;
-  page?: JSX.Element | (() => JSX.Element);
+  page?: JSX.Element | (() => Promise<JSX.Element> | JSX.Element);
   redirect?: string;
   priority?: number;
 }
