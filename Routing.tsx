@@ -1,5 +1,8 @@
-import React, { useState } from "react";
+import React from "react";
 
+let routerContext: React.Context<React.Dispatch<React.SetStateAction<string | undefined>>>;
+
+// Router
 /**
  * Routing v4
  */
@@ -15,23 +18,31 @@ function Router(props: {
   /**
    * 404 page if no page is found.
    */
-  NotFoundPage?: JSX.Element
+  notFoundPage?: JSX.Element,
 }) {
-  const [pageData, setPageData] = useState<JSX.Element>(undefined); // Imagine using undefined as a literal value smh
+  
+  const [pathState, setPathState] = React.useState<string>();
+  const [pageData, setPageData] = React.useState<JSX.Element>();
   if (pageData !== undefined) {
     return pageData;
   }
 
+  routerContext = React.createContext(setPathState);
+  
   let {
     routes,
-    overridePath
+    overridePath,
+    notFoundPage
   } = props;
 
   // Correct routes.
-  if (routes.length > 1) routes = routes.map(r => { r.priority = r.priority ?? 0; return r; }).sort((r, r2) => r2.priority - r.priority);
+  if (routes.length > 1) routes = routes.map(r => { r.priority = r.priority ?? 0; return r; }).sort((r, r2) => (r2.priority ?? 0) - (r.priority ?? 0));
 
   // Parse routes
-  let path = overridePath ?? window.location.pathname;
+  let path = pathState ?? overridePath ?? window.location.pathname;
+  if (pathState && pathState !== window.location.pathname) {
+    window.history.pushState(null, "", pathState);
+  }
   let route = routes.find(r => {
     if (typeof r.name === "string") {
       return r.name === path;
@@ -43,7 +54,7 @@ function Router(props: {
   });
 
   if (!route) {
-    return props.NotFoundPage ?? (<div>
+    return notFoundPage ?? (<div>
       <h1>404</h1>
       <p>The page could not be found.</p>
     </div>);
@@ -65,7 +76,8 @@ function Router(props: {
       }
       else if (route.name instanceof RegExp) {
         let matches = path.match(route.name);
-        let m = matches.shift();
+        if (matches === null || matches.length > 0) return (<></>);
+        let m = matches.shift() as string;
         let loadedPage = ((route as PageRouteDynamic).page as ((match: string, ...rest: string[]) => Promise<JSX.Element>))(m, ...matches);
         Promise.resolve().then(async () => {
           setPageData(await loadedPage);
@@ -92,7 +104,7 @@ function Router(props: {
       return route.page;
     }
   } catch (error) {
-    return props.NotFoundPage ?? (<div>
+    return notFoundPage ?? (<div>
       <h1>404</h1>
       <p>The page cound not be found.</p>
     </div>)
@@ -116,3 +128,26 @@ export interface PageRouteStatic {
 export type PageRoute = PageRouteDynamic | PageRouteStatic;
 
 export default Router;
+
+// Link
+/**
+ * 
+ * @param props Identical to a HTMLAnchorElement's attribute
+ * @returns 
+ */
+export const Link = React.forwardRef<HTMLAnchorElement, React.AnchorHTMLAttributes<HTMLAnchorElement>>(
+  function Link(props: React.AnchorHTMLAttributes<HTMLAnchorElement>, ref) {
+    const setPage = React.useContext(routerContext);
+    
+    const { onClick, href } = props;
+    delete props.onClick;
+  
+    return (
+      <a ref={ref} {...props} onClick={e => {
+        e.preventDefault();
+        if (typeof onClick === "function") onClick(e);
+        setPage(href ?? "#");
+      }}>{props.children}</a>
+    )
+  }
+)
