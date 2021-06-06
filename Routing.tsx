@@ -6,7 +6,7 @@ let routerContext: React.Context<React.Dispatch<React.SetStateAction<string | un
 /**
  * Routing v4
  */
-function Router(props: {
+export default function Router(props: {
   /**
    * Possible routes and their relative conditions.
    */
@@ -19,10 +19,31 @@ function Router(props: {
    * 404 page if no page is found.
    */
   notFoundPage?: JSX.Element,
+  /**
+   * Whether or not the router should automatically reroute when the URL has changed.
+   * 
+   * This is helpful for when the user goes back or forward in the browser, after using a `<Link>` component to change the URL.
+   * 
+   * @default true
+   */
+  autoReroute?: boolean,
 }) {
   
   const [pathState, setPathState] = React.useState<string>();
   const [pageData, setPageData] = React.useState<JSX.Element>();
+  React.useEffect(() => {
+    function popStateHandler(e: PopStateEvent) {
+      setTimeout(() => {
+        setPathState(window.location.pathname);
+      }, 10);
+    }
+    if (props.autoReroute ?? true) {
+  
+      window.addEventListener("popstate", popStateHandler);
+      return () => window.removeEventListener("popstate", popStateHandler);
+    }
+  });
+
   if (pageData !== undefined) {
     return pageData;
   }
@@ -125,11 +146,9 @@ export interface PageRouteStatic {
 
 export type PageRoute = PageRouteDynamic | PageRouteStatic;
 
-export default Router;
-
 // Link
 /**
- * 
+ * The `href` attribute can only be used for local/same origin URLs. Relative and absolute URLs should work just fine.
  * @param props Identical to a HTMLAnchorElement's attribute
  * @returns 
  */
