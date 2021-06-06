@@ -39,9 +39,10 @@ function Router(props: {
   if (routes.length > 1) routes = routes.map(r => { r.priority = r.priority ?? 0; return r; }).sort((r, r2) => (r2.priority ?? 0) - (r.priority ?? 0));
 
   // Parse routes
-  let path = pathState ?? overridePath ?? window.location.pathname;
+  let path = overridePath ?? window.location.pathname;
   if (pathState && pathState !== window.location.pathname) {
     window.history.pushState(null, "", pathState);
+    path = window.location.pathname;
   }
   let route = routes.find(r => {
     if (typeof r.name === "string") {
@@ -84,15 +85,12 @@ function Router(props: {
         });
         return (<>Please wait while the page loads...</>) // Should be user defined loading page?
       }
-      else {
-        return (
-          <div>
-            <p>Internal Error</p>
-            <p>Unknown Error</p>
-          </div>
-        );
-        return (<div>Internal Error</div>);
-      }
+      return (
+        <div>
+          <p>Internal Error</p>
+          <p>Unknown Error</p>
+        </div>
+      );
     }
     else {
       if (!route.page) return (
