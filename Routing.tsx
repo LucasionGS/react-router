@@ -65,12 +65,13 @@ export default function Router(props: {
     window.history.pushState(null, "", pathState);
     path = window.location.pathname;
   }
+  const checkCondtions = (condition: PageRoute["condition"]) => typeof condition === "function" ? condition() : true;
   let route = routes.find(r => {
     if (typeof r.name === "string") {
-      return r.name === path;
+      return r.name === path && checkCondtions(r.condition);
     }
     else if (r.name instanceof RegExp) {
-      return r.name.test(path);
+      return r.name.test(path) && checkCondtions(r.condition);
     }
     return false;
   });
@@ -130,18 +131,33 @@ export default function Router(props: {
   }
 }
 
-export interface PageRouteDynamic {
-  name: RegExp;
-  page?: JSX.Element | ((match: string, ...rest: string[]) => Promise<JSX.Element> | JSX.Element);
+export interface PageRouteBase {
+  /**
+   * If `page` is unset, use this to redirect to a different page url.
+   */
   redirect?: string;
+  /**
+   * If 2 or more routes match, the one with the highest priority is used.
+   * @type number
+   */
   priority?: number;
+  /**
+   * Check conditions if the route should be used. Function that returns a boolean.
+   * 
+   * If `condition` returns `true`, the route will be used.
+   * otherwise, the route will not be used and second higher priority routes will be used.
+   */
+  condition?: () => boolean;
 }
 
-export interface PageRouteStatic {
+export interface PageRouteDynamic extends PageRouteBase {
+  name: RegExp;
+  page?: JSX.Element | ((match: string, ...rest: string[]) => Promise<JSX.Element> | JSX.Element);
+}
+
+export interface PageRouteStatic extends PageRouteBase {
   name: string;
   page?: JSX.Element | (() => Promise<JSX.Element> | JSX.Element);
-  redirect?: string;
-  priority?: number;
 }
 
 export type PageRoute = PageRouteDynamic | PageRouteStatic;
