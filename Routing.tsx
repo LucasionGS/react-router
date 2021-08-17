@@ -99,7 +99,7 @@ export default function Router(props: {
       }
       else if (route.name instanceof RegExp) {
         let matches = path.match(route.name);
-        if (matches === null || matches.length > 0) return (<></>);
+        if (matches === null || matches.length == 0) return (<></>);
         let m = matches.shift() as string;
         let loadedPage = ((route as PageRouteDynamic).page as ((match: string, ...rest: string[]) => Promise<JSX.Element>))(m, ...matches);
         Promise.resolve().then(async () => {
